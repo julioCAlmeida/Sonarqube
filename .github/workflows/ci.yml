@@ -42,6 +42,7 @@ jobs:
           /o:"juliocalmeida" \
           /d:sonar.host.url="https://sonarcloud.io" \
           /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+          /d:sonar.coverage.exclusions="**/Program.cs" \
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
 
       # 6. Restore
