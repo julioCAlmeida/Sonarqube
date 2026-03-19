@@ -1,0 +1,61 @@
+name: CI + Quality
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  build-test-analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Setup .NET
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      # 3. Cache dependências
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      # 4. Instalar SonarScanner
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      # 5. Iniciar análise Sonar
+      - name: Sonar Begin
+        run: |
+          dotnet sonarscanner begin \
+          /k:"SEU_PROJECT_KEY" \
+          /o:"juliocalmeida" \
+          /d:sonar.host.url="https://sonarcloud.io" \
+          /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+
+      # 6. Restore
+      - name: Restore
+        run: dotnet restore
+
+      # 7. Build
+      - name: Build
+        run: dotnet build --no-restore
+
+      # 8. Testes + cobertura
+      - name: Test with coverage
+        run: dotnet test --no-build /p:CollectCoverage=true /p:CoverletOutput=./TestResults/coverage /p:CoverletOutputFormat=opencover
+
+      # 9. Finalizar análise Sonar
+      - name: Sonar End
+        run: dotnet sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
